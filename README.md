@@ -1,4 +1,2 @@
 orthotokenizer
 ==============
-
-Orthography Tokenizer
