@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Module for graphemeic and orthographic tokenization with orthography profiles.
+Tokenizer of Unicode characters, grapheme clusters and tailored grapheme clusters (orthographies) given an orthography profile.
 
 """
 
