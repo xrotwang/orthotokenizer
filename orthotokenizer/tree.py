@@ -52,17 +52,10 @@ class Tree(object):
         self.root = TreeNode('')
         self.root.makeSentinel()
 
-        header = []
-
         for i, line in normalized_lines(filename):
             if i == 0 and line.lower().startswith("graphemes"):
                 # deal with the columns header -- should always start with "graphemes" as
                 # per the orthography profiles specification
-                header = line.split("\t")
-                continue
-
-            # skip any comments
-            if line.startswith("#") or line == "":
                 continue
 
             tokens = line.split("\t")  # split the orthography profile into columns
