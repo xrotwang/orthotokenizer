@@ -30,13 +30,13 @@ def read(fname):
 
 
 setup(
-    name='tokenize',
+    name='orthotokenizer',
     version="0.1.0",
-    description='A Python Script',
+    description='',
     long_description=read("README.rst"),
     author='Steven Moran',
     author_email='steven.moran@uzh.ch',
-    url='https://github.com/clld/orthotokenizer',
+    url='https://github.com/lingpy/orthotokenizer',
     install_requires=requires,
     license=read("LICENSE"),
     zip_safe=False,

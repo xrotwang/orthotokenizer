@@ -3,23 +3,20 @@
 Tokenizer of Unicode characters, grapheme clusters and tailored grapheme clusters (orthographies) given an orthography profile.
 
 """
-
-__author__ = "Steven Moran"
-__date__ = "2010-12-01"
-
+from __future__ import unicode_literals, division, absolute_import, print_function
 import os
-import codecs
 import unicodedata
 
 import regex as re
 
-import orthotokenizer
 from orthotokenizer.tree import Tree
+from orthotokenizer.util import normalized_lines, normalized_string
 
 
 class Tokenizer(object):
     """
-    Class for orthographic parsing using orthography profiles as designed for the QLC project.
+    Class for orthographic parsing using orthography profiles as designed for the QLC
+    project.
 
     Parameters
     ----------
@@ -82,69 +79,43 @@ class Tokenizer(object):
 
     """
 
-    def __init__(self, orthography_profile=None):
-        # check various places for orthography profiles
-        ortho_path = ""
-        if orthography_profile:
-            # strip possible file extension
-            if orthography_profile.endswith('.prf'):
-                orthography_profile = orthography_profile[:-4]
+    def __init__(self, orthography_profile=None, orthography_profile_rules=None):
+        self.orthography_profile = orthography_profile
+        self.orthography_profile_rules = orthography_profile_rules
+        self.tree = None
 
-            # get path and filename of orthography profile
-            if os.path.exists(orthography_profile+".prf"):
-                ortho_path = orthography_profile
-            else:
-                ortho_path = os.path.join(
-                    os.path.dirname(orthotokenizer.__file__),
-                    'profiles',
-                    orthography_profile
-                )
+        # store column labels from the orthography profile
+        self.column_labels = []
+
+        # look up table of graphemes to other column transforms
+        self.mappings = {}
+
+        # double check that there are no duplicate graphemes in the orthography profile
+        self.op_graphemes = {}
 
         # orthography profile processing
-        if os.path.isfile(ortho_path+".prf"):
-            self.orthography_profile = ortho_path+".prf"
-
+        if self.orthography_profile:
             # read in orthography profile and create a trie structure for tokenization
             self.tree = Tree(self.orthography_profile)
-
-            # store column labels from the orthography profile
-            self.column_labels = []
-
-            # look up table of graphemes to other column transforms
-            self.mappings = {}
-
-            # double check that there are no duplicate graphemes in the orthography profile
-            self.op_graphemes = {}
-
             # process the orthography profiles and rules
-            self._init_profile(self.orthography_profile)
+            self._init_profile()
 
-        else:
-            self.orthography_profile = None
+        if not self.orthography_profile_rules and self.orthography_profile:
+            rules_path = os.path.splitext(self.orthography_profile)[0] + '.rules'
+            if os.path.exists(rules_path):
+                self.orthography_profile_rules = rules_path
 
         # orthography profile rules and replacements
-        if os.path.isfile(ortho_path+".rules"):
-            self.orthography_profile_rules = ortho_path+".rules"
+        if self.orthography_profile_rules:
             self.op_rules = []
             self.op_replacements = []
-            self._init_rules(self.orthography_profile_rules)
-        else:
-            self.orthography_profile_rules = None
+            self._init_rules()
 
-    def _init_profile(self, f):
+    def _init_profile(self):
         """
         Process and initialize data structures given an orthography profile.
         """
-        f = codecs.open(f, "r", "utf-8")
-        line_count = 0
-        for line in f:
-            line_count += 1
-            line = line.strip()
-
-            # skip any comments in the orthography profile
-            if line.startswith("#") or line == "":
-                continue
-
+        for i, line in normalized_lines(self.orthography_profile):
             # deal with the columns header -- should always start with "graphemes" as per the orthography profiles specification
             if line.lower().startswith("graphemes"):
                 column_tokens = line.split("\t")
@@ -154,18 +125,15 @@ class Tokenizer(object):
                     self.column_labels.append(column_token.lower().strip())
                 continue
 
-            # Unicode NFD the line
-            line = unicodedata.normalize("NFD", line)
-
             # split the orthography profile into columns
             tokens = line.split("\t")
             grapheme = tokens[0].strip()
 
             # check for duplicates in the orthography profile (fail if dups)
-            if not grapheme in self.op_graphemes:
+            if grapheme not in self.op_graphemes:
                 self.op_graphemes[grapheme] = 1
             else:
-                raise Exception("You have a duplicate in your orthography profile at: {0}".format(line_count))
+                raise Exception("You have a duplicate in your orthography profile.")
 
             if len(tokens) == 1:
                 continue
@@ -174,34 +142,20 @@ class Tokenizer(object):
                 token = tokens[i].strip()
                 self.mappings[grapheme, self.column_labels[i].lower()] = token
 
-        f.close()
-
-
-    def _init_rules(self, f):
+    def _init_rules(self):
         """
         Process the orthography rules file.
         """
-        rules_file = codecs.open(f, "r", 'utf-8')
-
-        # compile the orthography rules
-        for line in rules_file:
-            line = line.strip()
-
-            # skip any comments
-            if line.startswith("#") or line == "":
-                continue
-
-            line = unicodedata.normalize("NFD", line)
+        for i, line in normalized_lines(self.orthography_profile_rules):
             rule, replacement = line.split(",")
             rule = rule.strip() # just in case there's trailing whitespace
             replacement = replacement.strip() # because there's probably trailing whitespace!
             self.op_rules.append(re.compile(rule))
             self.op_replacements.append(replacement)
-        rules_file.close()
 
         # check that num rules == num replacements; if not fail
         if len(self.op_rules) != len(self.op_replacements):
-            raise ValueError("[i] Number of inputs does not match number of outputs in the rules file.")
+            raise ValueError("Number of inputs does not match number of outputs in the rules file.")
 
     def characters(self, string):
         """
@@ -223,13 +177,7 @@ class Tokenizer(object):
         Input is first normalized according to Normalization Ford D(ecomposition).
         String returned contains "#" to mark word boundaries.
         """
-
-        string = string.replace(" ", "#") # add boundaries between words
-        string = unicodedata.normalize("NFD", string)
-        result = ""
-        for character in string:
-            result += character+" "
-        return result.strip()
+        return ' '.join(char for char in normalized_string(string))
 
     def grapheme_clusters(self, string):
         """
@@ -253,22 +201,10 @@ class Tokenizer(object):
         -----
         Input is first normalized according to Normalization Ford D(ecomposition).
         """
-
         # init the regex Unicode grapheme cluster match
         grapheme_pattern = re.compile("\X", re.UNICODE)
-
-        # add boundaries between words
-        string = string.replace(" ", "#")
-
-        # Unicode NDF the string
-        string = unicodedata.normalize("NFD", string)
-
-        result = ""
-        graphemes = grapheme_pattern.findall(string)
-        for grapheme in graphemes:
-            result += grapheme+" "
-        result = result.strip()
-        return result
+        return ' '.join(grapheme for grapheme in
+                        grapheme_pattern.findall(normalized_string(string)))
 
     def graphemes(self, string):
         """
@@ -285,30 +221,24 @@ class Tokenizer(object):
             The result of the parsed and QLC formatted str.
 
         """
-        string = unicodedata.normalize("NFD", string)
-
         # if no orthography profile is specified, simply return
         # Unicode grapheme clusters, regex pattern "\X"
-        if self.orthography_profile == None:
+        if not self.orthography_profile:
             return self.grapheme_clusters(string)
 
         parses = []
-        for word in string.split():
+        for word in normalized_string(string, add_boundaries=False).split():
             parse = self.tree.parse(word)
 
             # case where the parsing fails
-            if len(parse) == 0:
+            if not parse:
                 # replace characters in string but not in orthography profile with <?>
-                parse = " "+self.find_missing_characters(self.characters(word))
+                parse = " " + self.find_missing_characters(self.characters(word))
 
             parses.append(parse)
 
-        # remove the outter word boundaries
-        result = "".join(parses).replace("##", "#")
-        result = result.rstrip("#")
-        result = result.lstrip("#")
-        return result.strip()
-
+        # remove the outer word boundaries
+        return "".join(parses).replace("##", "#").rstrip("#").lstrip("#").strip()
 
     def transform(self, string, column="graphemes"):
         """
@@ -331,14 +261,14 @@ class Tokenizer(object):
 
         """
         # This method can't be called unless an orthography profile was specified.
-        if self.orthography_profile is None:
+        if not self.orthography_profile:
             raise Exception("This method only works when an orthography profile is specified.")
 
         if column == "graphemes":
             return self.graphemes(string)
 
         # if the column label for conversion doesn't exist, return grapheme tokenization
-        if not column in self.column_labels:
+        if column not in self.column_labels:
             return self.graphemes(string)
 
         # first tokenize the input string into orthography profile graphemes
@@ -383,7 +313,6 @@ class Tokenizer(object):
             Result of the tokenization.
 
         """
-
         if self.orthography_profile and self.orthography_profile_rules:
             return self.rules(self.transform(string, column))
 
@@ -420,18 +349,18 @@ class Tokenizer(object):
 
         """
         # if no orthography profile rules file has been specified, simply return the string
-        if self.orthography_profile_rules is None:
+        if not self.orthography_profile_rules:
             return string
 
-        result = unicodedata.normalize("NFD", string)
-        for i in range(0, len(self.op_rules)):
-            match = self.op_rules[i].search(result)
+        result = normalized_string(string, add_boundaries=False)
+        for rule, replacement in zip(self.op_rules, self.op_replacements):
+            match = rule.search(result)
             if match:
-                result = re.sub(self.op_rules[i], self.op_replacements[i], result)
+                result = re.sub(rule, replacement, result)
 
         # this is in case someone introduces a non-NFD ordered sequence of characters
         # in the orthography profile
-        return unicodedata.normalize("NFD", result)
+        return normalized_string(result, add_boundaries=False)
 
     def find_missing_characters(self, char_tokenized_string):
         """
@@ -446,9 +375,7 @@ class Tokenizer(object):
         """
         Experimental method for tokenizing IPA.
         """
-        string = unicodedata.normalize("NFD", string)
-        grapheme_clusters = self.grapheme_clusters(string)
-        return self.combine_modifiers(grapheme_clusters)
+        return self.combine_modifiers(self.grapheme_clusters(string))
 
     def combine_modifiers(self, string):
         """
@@ -494,52 +421,3 @@ class Tokenizer(object):
                 i += 1
 
         return " ".join(r)
-
-
-        """
-        # list of points (decimal) of Unicode Mns that require a closing grapheme
-        # 865 COMBINING DOUBLE INVERTED BREVE
-        # 860 COMBINING DOUBLE BREVE BELOW
-
-        bimodifiers = [860, 865]
-
-        graphemes = string.split()
-        print(graphemes)
-
-        result = []
-        temp = ""
-
-        i = 0
-        while i < len(graphemes)-1:
-            # TODO: catch if the first thing is a modifer
-            print(graphemes[i])
-            for char in graphemes[i]:
-                if unicodedata.category(char) == "Mn":
-                    result.append
-            i += 1
-            continue
-
-            # result.append(graphemes[i])
-
-            if i+1 <= len(graphemes):
-                for char in graphemes[i]:
-                    print(graphemes[i])
-                    if unicodedata.category(graphemes[i]) == "Mn":
-                        # temp = graphemes[i]+graphemes[i+1]+graphemes[i+2]
-                        i = i+2
-                        graphemes.append(temp)
-                        continue
-                result.append(graphemes[i])
-                i += 1
-
-            # unicodedata.category() == "Mn" # Mark, non-spacing characters
-            # if i < len(graphemes) - 1:
-                # check for i+1
-                # if it's combiner, grab it
-                # i++
-                # if char is in bimodifiers
-
-        return " ".join(result)
-
-        """
-
