@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import os
 import unittest
 from orthotokenizer.tokenizer import Tokenizer
+from orthotokenizer.tree import printMultigraphs
 
 
 class TokenizerTestCase(unittest.TestCase):
@@ -13,6 +14,8 @@ class TokenizerTestCase(unittest.TestCase):
 
     def test_printTree(self):
         self.t.tree.printTree(self.t.tree.root)
+        printMultigraphs(self.t.tree.root, '', '')
+        printMultigraphs(self.t.tree.root, 'abcd', '')
 
     def test_characters(self):
         t = Tokenizer()
@@ -57,3 +60,7 @@ class TokenizerTestCase(unittest.TestCase):
     def test_find_missing_characters(self):
         result = self.t.find_missing_characters("L i s t")
         self.assertEqual(result, "? ? s ?")
+
+    def test_tokenize_ipa(self):
+        t = Tokenizer()
+        t.tokenize_ipa("Màttís List")

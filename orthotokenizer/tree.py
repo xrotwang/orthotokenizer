@@ -1,42 +1,17 @@
 from __future__ import unicode_literals, print_function
 
-from orthotokenizer.util import normalized_lines
+from orthotokenizer.util import normalized_rows
 
 
 class TreeNode(object):
     """
-    Private class that creates the trie data structure from the orthography profile for parsing.
+    Private class that creates the tree data structure from the orthography profile for parsing.
     """
 
-    def __init__(self, char):
+    def __init__(self, char, sentinel=False):
         self.char = char
         self.children = {}
-        self.sentinel = False
-
-    def isSentinel(self):
-        return self.sentinel
-
-    def getChar(self):
-        return self.char
-
-    def makeSentinel(self):
-        self.sentinel = True
-
-    def addChild(self, char):
-        child = self.getChild(char)
-        if not child:
-            child = TreeNode(char)
-            self.children[char] = child
-        return child
-
-    def getChild(self, char):
-        if char in self.children:
-            return self.children[char]
-        else:
-            return None
-
-    def getChildren(self):
-        return self.children
+        self.sentinel = sentinel
 
 
 class Tree(object):
@@ -44,23 +19,20 @@ class Tree(object):
         # Internal function to add a multigraph starting at node.
         def addMultigraph(node, line):
             for char in line:
-                node = node.addChild(char)
-            node.makeSentinel()
+                node = node.children.setdefault(char, TreeNode(char))
+            node.sentinel = True
 
         # Add all multigraphs in each line of file_name.
         # Skip "#" comments and blank lines.
-        self.root = TreeNode('')
-        self.root.makeSentinel()
+        self.root = TreeNode('', sentinel=True)
 
-        for i, line in normalized_lines(filename):
-            if i == 0 and line.lower().startswith("graphemes"):
+        for i, tokens in enumerate(normalized_rows(filename, '\t')):
+            if i == 0 and tokens[0].lower().startswith("graphemes"):
                 # deal with the columns header -- should always start with "graphemes" as
                 # per the orthography profiles specification
                 continue
 
-            tokens = line.split("\t")  # split the orthography profile into columns
-            grapheme = tokens[0]
-            addMultigraph(self.root, grapheme)
+            addMultigraph(self.root, tokens[0])
 
     def parse(self, line):
         parse = self._parse(self.root, line)
@@ -75,11 +47,11 @@ class Tree(object):
         curr = 0
         node = root
         while curr < len(line):
-            node = node.getChild(line[curr])
+            node = node.children.get(line[curr])
             curr += 1
             if not node:
                 break
-            if node.isSentinel():
+            if node.sentinel:
                 subparse = self._parse(root, line[curr:])
                 if len(subparse) > 0:
                     # Always keep the latest valid parse, which will be
@@ -91,12 +63,12 @@ class Tree(object):
         return parse
 
     def printTree(self, root, path=''):
-        for char, child in root.getChildren().items():
-            if child.isSentinel():
+        for char, child in root.children.items():
+            if child.sentinel:
                 char += "*"
             branch = (" -- " if len(path) > 0 else "")
             self.printTree(child, path + branch + char)
-        if len(root.getChildren()) == 0:
+        if not root.children:
             print(path)
 
 
@@ -111,10 +83,10 @@ def printMultigraphs(root, line, result):
     last = 0   # Index of last character of last-seen multigraph.
     node = root
     while curr < len(line):
-        node = node.getChild(line[curr])
+        node = node.children.get(line[curr])
         if not node:
             break
-        if node.isSentinel():
+        if node.sentinel:
             last = curr
         curr += 1
 

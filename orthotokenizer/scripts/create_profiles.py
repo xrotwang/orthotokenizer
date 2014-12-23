@@ -21,7 +21,7 @@ from io import open
 
 from docopt import docopt
 
-from orthotokenizer.util import normalized_lines
+from orthotokenizer.util import normalized_rows
 
 __version__ = "0.1.0"
 __author__ = "Steven Moran"
@@ -39,7 +39,7 @@ def create_profiles(filename, out, verbose=False):
     graphemes = collections.Counter()
 
     grapheme_pattern = re.compile("\X", re.UNICODE)
-    for _, line in normalized_lines(filename):
+    for line in normalized_rows(filename, None):
         # remove white space?
         # line = line.replace(" ", "")
         characters.update(line)

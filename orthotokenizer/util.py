@@ -3,11 +3,14 @@ import codecs
 import unicodedata
 
 
-def normalized_lines(path, skip_comments=True):
-    for i, line in enumerate(codecs.open(path, 'r', 'utf8')):
+def normalized_rows(path, separator, skip_comments=True):
+    for line in codecs.open(path, 'r', 'utf8'):
         line = unicodedata.normalize('NFD', line.strip())
         if line and (not skip_comments or not line.startswith('#')):
-            yield i, line
+            if separator:
+                yield [col.strip() for col in line.split(separator)]
+            else:
+                yield line
 
 
 def normalized_string(string, add_boundaries=True):
