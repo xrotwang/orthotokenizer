@@ -16,7 +16,7 @@ Options:
 from __future__ import unicode_literals, print_function
 import os
 import collections
-import re
+import regex as re
 from io import open
 
 from docopt import docopt
