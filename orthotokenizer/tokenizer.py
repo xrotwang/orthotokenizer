@@ -6,12 +6,10 @@ Tokenizer of Unicode characters, grapheme clusters and tailored grapheme cluster
 from __future__ import unicode_literals, division, absolute_import, print_function
 import os
 import unicodedata
-
 import regex as re
 
 from orthotokenizer.tree import Tree
 from orthotokenizer.util import normalized_rows, normalized_string
-
 
 class Tokenizer(object):
     """
@@ -47,7 +45,7 @@ class Tokenizer(object):
     For example, an orthography profile might specify that in source X
     <uu> is a single grapheme (Unicode parlance: tailored grapheme) and
     thererfore it should be chunked as so. Given an orthography profile and
-    some data to parse, the process would look like this:
+    some data to tokenize, the process would look like this:
 
     input string example: uubo uubo
     output string example: uu b o # uu b o
@@ -147,7 +145,7 @@ class Tokenizer(object):
         Parameters
         ----------
         string : str
-            A Unicode string to be parsed into graphemes.
+            A Unicode string to be tokenized into graphemes.
 
         Returns
         -------
@@ -172,7 +170,7 @@ class Tokenizer(object):
         Parameters
         ----------
         string : str
-            A Unicode string to be parsed into graphemes.
+            A Unicode string to be tokenized into graphemes.
 
         Returns
         -------
@@ -194,12 +192,12 @@ class Tokenizer(object):
         Parameters
         ----------
         string : str
-            The str to be parsed and formatted.
+            The str to be tokenized and formatted.
 
         Returns
         -------
         result : str
-            The result of the parsed and QLC formatted str.
+            The result of the tokenized and QLC formatted str.
 
         """
         # if no orthography profile is specified, simply return
@@ -230,7 +228,7 @@ class Tokenizer(object):
         Parameters
         ----------
         string : str
-            The input string to be parsed.
+            The input string to be tokenized.
 
         conversion : str (default = "graphemes")
             The label of the column to transform to. Default it to tokenize with orthography profile.
@@ -241,6 +239,8 @@ class Tokenizer(object):
             Result of the transformation.
 
         """
+        column = column.lower()
+
         # This method can't be called unless an orthography profile was specified.
         if not self.orthography_profile:
             raise Exception("This method only works when an orthography profile is specified.")
@@ -305,12 +305,12 @@ class Tokenizer(object):
 
     def rules(self, string):
         """
-        Function to parse input string and return output of str with ortho rules applied.
+        Function to tokenize input string and return output of str with ortho rules applied.
 
         Parameters
         ----------
         string : str
-            The input string to be parsed.
+            The input string to be tokenized.
 
         Returns
         -------
