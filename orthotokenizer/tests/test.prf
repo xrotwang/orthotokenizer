@@ -1,18 +1,20 @@
-# LingPy / QLC example profile
+# LingPy / QLC example profile for testing orthography profiles and tokenization
 # 
-# used also in testing of the orthography profile
-#
-# Author: Steven Moran
-#
-#
-graphemes	IPA	funny
-a	a	!
-aa	aː	?
+graphemes	IPA	XSAMPA
+a	a	a
+aa	aː	a:
 b	b	b
-ch	tʃ	h
+c	c	c
+ch	tʃ	tS
 -	NULL	NULL
-M	m	J
-à	a	e
-tt	tː	l
-í	i	n
-s	s	a
+on	õ	o~
+n	n	n
+ih	í	i_H
+inh	ĩ́	i~_H
+
+
+# aabchonn-ih
+# aa b ch on n ih
+# aː b tʃ õ n í 
+# a: b tS o~ n i_H 
+# aabchonn-ihzz
