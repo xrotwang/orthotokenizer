@@ -6,19 +6,25 @@ import unittest
 from orthotokenizer.tokenizer import Tokenizer
 from orthotokenizer.tree import printMultigraphs
 
+
+def _test_path(fname):
+    return os.path.join(os.path.dirname(__file__), fname)
+
+
 def jipa(input, gold):
-    with codecs.open(input, "r", "utf-8") as infile:
+    with codecs.open(_test_path(input), "r", "utf-8") as infile:
         input = infile.read()
-    with codecs.open(gold, "r", "utf-8") as goldfile:
+    with codecs.open(_test_path(gold), "r", "utf-8") as goldfile:
         gold = goldfile.read()
     return(input, gold)
+
 
 class TokenizerTestCase(unittest.TestCase):
     """ Tests for tokenizer.py """
     maxDiff = None # for printing large output
 
     def setUp(self):
-        self.t = Tokenizer(os.path.join(os.path.dirname(__file__), 'test.prf'))
+        self.t = Tokenizer(_test_path('test.prf'))
 
     def test_printTree(self):
         self.t.tree.printTree(self.t.tree.root)
